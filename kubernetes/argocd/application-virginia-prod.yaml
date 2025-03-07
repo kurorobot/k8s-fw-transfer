@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fw-transfer-virginia-prod
+  namespace: argocd
+spec:
+  project: fw-transfer-project
+  source:
+    repoURL: https://github.com/your-org/fw-transfer-app.git
+    targetRevision: HEAD
+    path: kubernetes/overlays/virginia/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: virginia-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

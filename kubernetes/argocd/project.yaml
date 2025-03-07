@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fw-transfer-project
+  namespace: argocd
+spec:
+  description: FW Transfer Application Project
+  sourceRepos:
+    - https://github.com/your-org/fw-transfer-app.git
+  destinations:
+    - namespace: tokyo-prod
+      server: https://kubernetes.default.svc
+    - namespace: tokyo-nonprod
+      server: https://kubernetes.default.svc
+    - namespace: singapore-prod
+      server: https://kubernetes.default.svc
+    - namespace: singapore-nonprod
+      server: https://kubernetes.default.svc
+    - namespace: virginia-prod
+      server: https://kubernetes.default.svc
+    - namespace: virginia-nonprod
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'

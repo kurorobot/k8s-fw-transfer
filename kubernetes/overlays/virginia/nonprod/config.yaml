@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fw-transfer-app
+spec:
+  template:
+    spec:
+      containers:
+        - name: fw-transfer
+          env:
+            - name: REGION
+              value: 'virginia'
+            - name: ENVIRONMENT
+              value: 'nonprod'

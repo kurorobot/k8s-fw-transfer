@@ -1,0 +1,5 @@
+resources:
+  - ../../../base
+namespace: tokyo-prod
+patches:
+  - path: config.yaml

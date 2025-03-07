@@ -1,9 +1,27 @@
 import pandas as pd
 import openpyxl
+import os
 
-def process_fw_transfer(file_aws, file_internalfw):
-    """FWの転送処理を実行する関数"""
+def process_fw_transfer(file_aws, file_internalfw, region="tokyo", environment="prod"):
+    """FWの転送処理を実行する関数
+    
+    Args:
+        file_aws: AWS通信要件ヒアリングシートのパス
+        file_internalfw: InternalFW_RuleListのパス
+        region: リージョン名 (tokyo, singapore, virginia)
+        environment: 環境名 (prod, nonprod)
+    """
     try:
+        # 環境に応じたシート名の設定
+        env_suffix = "Prod" if environment.lower() == "prod" else "NonProd"
+        rules_sheet_name = f"Rules {env_suffix}"
+        ip_variables_sheet_name = f"IP set variables {env_suffix}"
+        
+        # 出力ファイル名の設定
+        output_filename = f"InternalFW_RuleList_{region.capitalize()}_{env_suffix}_final.xlsx"
+        output_dir = os.path.dirname(file_internalfw) if os.path.dirname(file_internalfw) else "."
+        output_file = os.path.join(output_dir, output_filename)
+
         # **[1] Internal FWシートのデータを取得**
         wb_aws = openpyxl.load_workbook(file_aws, data_only=True)
         ws_internal_fw = wb_aws["Internal FW"]
@@ -23,10 +41,15 @@ def process_fw_transfer(file_aws, file_internalfw):
         # "追加/Add" の行を抽出
         df_filtered = df_internal_fw[df_internal_fw["Action"].isin(["追加/Add"])].copy()
 
-        # **[2] Rules Prod シートのデータを取得**
+        # **[2] Rules シートのデータを取得**
         wb_internalfw = openpyxl.load_workbook(file_internalfw)
-        ws_rules_prod = wb_internalfw["Rules Prod"]
-        ws_ip_variables = wb_internalfw["IP set variables Prod"]  # IP set variables Prodシートを取得
+        
+        # 指定された環境のシートを取得
+        try:
+            ws_rules = wb_internalfw[rules_sheet_name]
+            ws_ip_variables = wb_internalfw[ip_variables_sheet_name]
+        except KeyError:
+            return False, f"シート '{rules_sheet_name}' または '{ip_variables_sheet_name}' が見つかりません", None
 
         # IP set variablesの辞書を作成
         ip_variables = {}
@@ -89,7 +112,7 @@ def process_fw_transfer(file_aws, file_internalfw):
             alert_rows = group[group["Action"] == "alert"]
             pass_rows = group[group["Action"] == "pass"]
             for a, p in zip(alert_rows.itertuples(index=False), pass_rows.itertuples(index=False)):
-                temp_groups.extend([pd.DataFrame([a], columns=df_result.columns),
+                temp_groups.extend([pd.DataFrame([a], columns=df_result.columns), 
                                   pd.DataFrame([p], columns=df_result.columns)])
         df_result = pd.concat(temp_groups, ignore_index=True)
 
@@ -105,13 +128,13 @@ def process_fw_transfer(file_aws, file_internalfw):
 
         # **[5] 新しいシートの作成と結果の出力**
         # 新しいシートを作成（既に存在する場合は削除してから作成）
-        new_sheet_name = "Rules Prod New"
+        new_sheet_name = f"Rules {env_suffix} New"
         if new_sheet_name in wb_internalfw.sheetnames:
             wb_internalfw.remove(wb_internalfw[new_sheet_name])
         ws_new = wb_internalfw.create_sheet(new_sheet_name)
 
         # 元のシートからヘッダー行をコピー
-        for col_idx, cell in enumerate(ws_rules_prod[3], start=1):  # 3行目（ヘッダー行）をコピー
+        for col_idx, cell in enumerate(ws_rules[3], start=1):  # 3行目（ヘッダー行）をコピー
             ws_new.cell(row=3, column=col_idx, value=cell.value)
             # スタイルもコピー
             if cell.has_style:
@@ -122,18 +145,18 @@ def process_fw_transfer(file_aws, file_internalfw):
             for col_idx, value in enumerate(row, start=1):
                 ws_new.cell(row=idx, column=col_idx, value=value)
                 # 元のシートと同じ列幅を設定
-                if ws_rules_prod.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width:
+                if ws_rules.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width:
                     ws_new.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = \
-                        ws_rules_prod.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width
+                        ws_rules.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width
 
-        # シートの順序を調整（Rules Prodの次に配置）
-        wb_internalfw.move_sheet(new_sheet_name, offset=-len(wb_internalfw.sheetnames)+2)
+        # シートの順序を調整（元のシートの次に配置）
+        sheet_index = wb_internalfw.sheetnames.index(rules_sheet_name)
+        wb_internalfw.move_sheet(new_sheet_name, offset=sheet_index+1-len(wb_internalfw.sheetnames))
 
         # **[6] 保存**
-        output_file = "/Users/yuu/Desktop/InternalFW_RuleList_Tokyo_Prod_final.xlsx"
         wb_internalfw.save(output_file)
         
-        return True, "処理が正常に完了しました。", output_file
+        return True, f"{region.capitalize()} {env_suffix}環境の処理が正常に完了しました。", output_file
     
     except Exception as e:
         return False, f"エラーが発生しました: {str(e)}", None
