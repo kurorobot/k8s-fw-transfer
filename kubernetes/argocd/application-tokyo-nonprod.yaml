@@ -6,7 +6,7 @@ metadata:
 spec:
   project: fw-transfer-project
   source:
-    repoURL: https://github.com/your-org/fw-transfer-app.git
+    repoURL: git@github.com:kurorobot/k8s-fw-transfer.git
     targetRevision: HEAD
     path: kubernetes/overlays/tokyo/nonprod
   destination:

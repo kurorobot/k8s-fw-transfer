@@ -6,7 +6,7 @@ metadata:
 spec:
   description: FW Transfer Application Project
   sourceRepos:
-    - https://github.com/your-org/fw-transfer-app.git
+    - git@github.com:kurorobot/k8s-fw-transfer.git
   destinations:
     - namespace: tokyo-prod
       server: https://kubernetes.default.svc
