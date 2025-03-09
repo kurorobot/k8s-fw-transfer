@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: fw-transfer
-          image: fw-transfer:v3
+          image: fw-transfer:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 8501
